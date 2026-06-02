@@ -19,7 +19,8 @@ architecturally honest slice of V1 — the code carries forward without a rewrit
 - `qa-boot init`, `qa-boot scan`, `qa-boot generate`
 - 6 deterministic built-in scanners: repo/languages, test, ci, docs, build/release,
   agent-config
-- Stub QA Radar evidence provider (fixture/contract-backed; **no live MCP wiring**)
+- **Live** QA Radar evidence provider — spawns the installed `qaradar analyze
+  --json-output` CLI as a subprocess and normalizes its output (ADR 0003)
 - Fact store: `qa-context/facts.json`, upsert-by-id, time-based staleness
 - Deterministic 6-dimension maturity rubric (doc 04)
 - Unknowns generation with the exact human question per unknown
@@ -29,7 +30,10 @@ architecturally honest slice of V1 — the code carries forward without a rewrit
 
 ### Out of scope (deferred to V1+)
 
-- Live QA Radar wiring (spawning `qaradar` / calling its MCP) — V0 is stub/fixture only
+- QA Radar **diff-aware mode** (`--base`) — V0 wires full-repo `analyze` only; the
+  PR-risk JSON shape (`PrRiskReport`) is a V1 add
+- Calling QA Radar via its **MCP** server — V0 uses the deterministic CLI path only
+  (the CLI must not depend on an agent, per doc 08)
 - Workspace mode and all `workspace *` commands
 - `qa-boot refresh` and `qa-boot status` (and the refresh diff summary)
 - The "no longer emitted → mark stale" merge rule (V0 keeps only time-based staleness)
@@ -63,8 +67,9 @@ src/
     docs-facts.ts  build-facts.ts  agent-facts.ts  repo-quality-facts.ts
   providers/
     evidence-provider.ts      # EvidenceProvider interface (doc 05)
-    qaradar-provider.ts       # isAvailable()/collect(); reads fixture JSON in V0
-    qaradar-contract.ts       # pinned JSON schema types (doc 06)
+    qaradar-provider.ts       # isAvailable() = qaradar on PATH; collect() spawns the CLI
+    qaradar-contract.ts       # types for the REAL qaradar --json-output shape
+    qaradar-parse.ts          # pure: raw JSON -> EvidenceResult[] (unit-tested vs fixture)
   unknowns/
     unknowns.ts               # derive unknown facts from absent signals
   maturity/
@@ -179,22 +184,60 @@ File-presence + shallow content parsing only. No AST, no network. Each returns
 | build | `Makefile`/`Dockerfile`/`docker-compose*`, npm `scripts` (build/start/test), `Fastlane/`, gradle tasks — flags what's present; QA-build/artifact/deploy specifics emit as unknown when not clearly found |
 | agent-config | `CLAUDE.md`, `AGENTS.md`, `.claude/` (skills/hooks/mcp), `.cursor/`/`.cursorrules` |
 
-## QA Radar (stub provider)
+## QA Radar (live provider)
 
-Per doc 06's V1 integration posture: adapter built against a pinned JSON contract
-and a committed fixture, with a stub provider standing in for live QA Radar.
+QA Radar is a real installed CLI (`qaradar`, a Python package; source at
+`../qaradar`). V0 wires it live as a subprocess (ADR 0003: consume its output,
+do not rebuild it). The doc 06 "pinned contract" was written before the tool
+existed and **does not match reality** — we pin against the verified shape below.
+(Follow-up: doc 06 should be corrected to this contract; tracked separately.)
 
-- `qaradar-contract.ts`: TypeScript types for the doc 06 JSON shape
-  (`schema_version`, `risky_modules[]`, `untested_files[]`, `coverage_gaps[]`,
-  `summary{critical_count,high_count}`). Unrecognized fields ignored.
-- `qaradar-provider.ts`: `isAvailable()` checks for the contract/fixture JSON;
-  `collect()` parses it into `EvidenceResult[]`.
-- `repo-quality-facts.ts`: normalizes into the `repo-risk.high-churn-untested-files`
-  fact (domain `repo_quality`, provenance `observed`) plus QA-Radar-derived unknowns
-  (technical risk present but business priority / ownership / release rules unknown).
-- Graceful degradation: `qaradar.enabled` is `auto | true | false`. When enabled
-  but unavailable → print `QA Radar not available. Continuing with built-in
-  scanners.`, record the gap as an unknown, continue (never fail the scan).
+### Verified contract (`qaradar analyze <path> --json-output`)
+
+```json
+{
+  "summary": {
+    "repo": "...", "analyzed_at": "ISO-8601",
+    "source_files": 14, "test_files": 14, "test_to_source_ratio": 1.0,
+    "avg_coverage": null,
+    "files_with_tests": 11, "files_without_tests": 3,
+    "critical_risk_count": 0, "high_risk_count": 3,
+    "coverage_status": "ok | no_report_found"
+  },
+  "risky_modules": [
+    { "path": "...", "risk_level": "critical|high|medium|low",
+      "risk_score": 0.681, "reasons": ["..."] }
+  ],
+  "untested_files": ["..."],
+  "high_churn": [ { "path": "...", "commits": 9 } ]
+}
+```
+
+Unrecognized fields are ignored, so future qaradar additions won't break parsing.
+
+### Provider
+
+- `qaradar-contract.ts`: TypeScript types for the shape above.
+- `qaradar-provider.ts`:
+  - `isAvailable()` → `qaradar` resolvable on PATH (when `qaradar.enabled` is
+    `auto` or `true`; `false` short-circuits to not-available).
+  - `collect()` → spawn `qaradar analyze <repoPath> --json-output` (with `--days`
+    and `--top` from config defaults), capture stdout, `JSON.parse`, hand to
+    `qaradar-parse.ts`. Non-zero exit / unparseable output → treated as
+    unavailable (logged), never throws into the scan.
+- `qaradar-parse.ts` (pure, unit-tested vs committed fixture): raw JSON →
+  `EvidenceResult[]`.
+- `repo-quality-facts.ts`: normalizes into the `repo_quality.high-churn-untested`
+  fact (provenance `observed`, value = the summary counts + top risky modules),
+  plus QA-Radar-derived unknowns (technical risk present but business priority /
+  ownership / release rules unknown — doc 06).
+
+### Graceful degradation
+
+`qaradar.enabled` is `auto | true | false`. When enabled but `qaradar` is not on
+PATH (or the run fails): print `QA Radar not available. Continuing with built-in
+scanners.`, record the gap as an unknown, continue — the scan never fails on the
+optional provider.
 
 ## Generated outputs
 
@@ -245,7 +288,9 @@ staleness uses it.
   "project_name": "example-service",
   "mode": "single-repo",
   "claude": { "enabled": true, "generate_skills": true },
-  "evidence_providers": { "qaradar": { "enabled": "auto" } },
+  "evidence_providers": {
+    "qaradar": { "enabled": "auto", "days": 90, "top": 20 }
+  },
   "refresh": { "default_days": 30 }
 }
 ```
@@ -265,8 +310,10 @@ staleness uses it.
 - Domain mappers / unknowns / rubric / renderers: pure-function tests with
   hand-built `Fact[]` / evidence inputs — no filesystem. (The payoff of A′.)
 - FactStore: upsert/merge + time-staleness unit tests.
-- qaradar provider: parse committed `fixtures/qaradar/sample.json`; plus an
-  "absent" case → graceful unknown.
+- qaradar parse/normalize: pure tests against committed `fixtures/qaradar/sample.json`
+  (captured from real `qaradar analyze --json-output`); plus an "absent" case →
+  graceful unknown. Live subprocess spawn covered by one integration test that is
+  **skipped when `qaradar` is not on PATH** (never spawns in unit runs).
 - CLI smoke: run `init`/`scan`/`generate` against a fixture repo in a temp dir;
   assert files exist + key content.
 
@@ -279,8 +326,9 @@ staleness uses it.
 4. `qa-boot generate` renders all domain summaries, `unknowns.md`, `CLAUDE.qa.md`,
    and the 4 skills from `facts.json`.
 5. Unknowns are explicit and each carries the exact human question.
-6. With the QA Radar fixture present, `repo-risk.md` and the `repo_quality` fact are
-   generated; without it, the scan still succeeds and records the gap as unknown.
+6. With `qaradar` installed, `qa-boot scan --with-qaradar` spawns it, and
+   `repo-risk.md` + the `repo_quality` fact are generated from real output; with
+   `qaradar` absent, the scan still succeeds and records the gap as unknown.
 7. The maturity rubric produces deterministic scores with evidence and next steps.
 8. All tests pass; scanners and renderers are independently tested.
 ```
