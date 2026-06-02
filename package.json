@@ -3,8 +3,12 @@
   "version": "0.0.0",
   "description": "Bootstrap QA context for AI coding agents.",
   "type": "module",
-  "bin": { "qa-boot": "dist/cli/index.js" },
-  "engines": { "node": ">=20" },
+  "bin": {
+    "qa-boot": "dist/cli/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/cli/index.ts",
@@ -15,6 +19,7 @@
   "dependencies": {
     "commander": "^12.1.0",
     "fast-glob": "^3.3.2",
+    "minimatch": "^9.0.9",
     "yaml": "^2.5.0"
   },
   "devDependencies": {
