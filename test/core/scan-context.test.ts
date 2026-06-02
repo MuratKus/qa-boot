@@ -19,4 +19,18 @@ describe("buildScanContext", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("match returns globbed paths and readJson parses files", () => {
+    const dir = mkdtempSync(join(tmpdir(), "qaboot-ctx2-"));
+    writeFileSync(join(dir, "package.json"), '{"name":"demo"}');
+    writeFileSync(join(dir, "README.md"), "# x");
+    try {
+      const ctx = buildScanContext(dir, defaultConfig("demo"));
+      expect(ctx.match("*.md")).toContain("README.md");
+      expect(ctx.readJson<{ name: string }>("package.json")?.name).toBe("demo");
+      expect(ctx.readJson("missing.json")).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
