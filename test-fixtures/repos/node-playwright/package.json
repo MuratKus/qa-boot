@@ -1,0 +1,5 @@
+{
+  "name": "web-app",
+  "scripts": { "build": "tsc", "test": "playwright test", "start": "node ." },
+  "devDependencies": { "@playwright/test": "^1.45.0", "typescript": "^5.5.0" }
+}
