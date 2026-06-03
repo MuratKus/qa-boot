@@ -44,6 +44,35 @@ V1 should not:
 - access secrets,
 - act as a full autonomous QA agent.
 
+## Usage (V0 prototype)
+
+The V0 CLI is implemented and verified end-to-end. From a repo you want to scan:
+
+```bash
+npm install && npm run build      # one-time, from the qa-boot checkout
+
+# then, inside the target repo:
+node <path-to-qa-boot>/dist/cli/index.js init --project-name my-service
+node <path-to-qa-boot>/dist/cli/index.js scan        # auto-runs generate
+```
+
+`scan` detects languages/tests/CI/docs/build/agent-config, writes
+`qa-context/facts.json`, and (unless `--no-generate`) renders the `qa-context/*.md`
+summaries, `unknowns.md`, `maturity.md`, `CLAUDE.qa.md`, and four `.claude/skills`.
+
+QA Radar is consumed live when installed:
+
+```bash
+node .../dist/cli/index.js scan --with-qaradar   # spawns `qaradar analyze --json-output`
+node .../dist/cli/index.js scan --skip-qaradar   # built-in scanners only
+```
+
+When `qaradar` is absent the scan still succeeds and records the gap as an
+unknown (`repo-risk.md` is only written when QA Radar ran).
+
+Design and plan: [`docs/superpowers/specs/2026-06-02-qa-boot-v0-design.md`](./docs/superpowers/specs/2026-06-02-qa-boot-v0-design.md)
+and [`docs/superpowers/plans/2026-06-02-qa-boot-v0.md`](./docs/superpowers/plans/2026-06-02-qa-boot-v0.md).
+
 ## Start here
 
 Read [`SPEC_INDEX.md`](./SPEC_INDEX.md) first.
