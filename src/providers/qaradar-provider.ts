@@ -5,7 +5,7 @@ import { parseQaradar } from "./qaradar-parse.js";
 import { qaradarEnabled } from "../config/config.js";
 
 function which(): boolean {
-  const probe = spawnSync("qaradar", ["--version"], { encoding: "utf8", shell: true });
+  const probe = spawnSync("qaradar", ["--version"], { encoding: "utf8" });
   return probe.status === 0;
 }
 
@@ -22,7 +22,7 @@ export const qaradarProvider: EvidenceProvider = {
     const run = spawnSync(
       "qaradar",
       ["analyze", ctx.repoPath, "--json-output", "--days", String(days), "--top", String(top)],
-      { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, shell: true },
+      { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
     );
     if (run.status !== 0 || !run.stdout) {
       return [];
