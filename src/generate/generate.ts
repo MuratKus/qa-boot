@@ -24,7 +24,13 @@ export function loadFacts(repoPath: string): Fact[] {
   if (!existsSync(path)) {
     throw new Error("qa-context/facts.json not found. Run `qa-boot scan` first.");
   }
-  return (JSON.parse(readFileSync(path, "utf8")) as { facts: Fact[] }).facts ?? [];
+  let parsed: { facts?: Fact[] };
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8")) as { facts?: Fact[] };
+  } catch {
+    throw new Error("qa-context/facts.json is malformed. Re-run `qa-boot scan` to regenerate it.");
+  }
+  return parsed.facts ?? [];
 }
 
 export function runGenerate(opts: GenerateOptions): string[] {

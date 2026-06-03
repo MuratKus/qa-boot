@@ -33,7 +33,20 @@ describe("deriveUnknownFacts", () => {
     expect(ids).toContain("build.qa-build-process");
   });
 
-  it("emits exactly the 8 specified unknowns when nothing is suppressed", () => {
-    expect(deriveUnknownFacts([], "2026-06-02")).toHaveLength(8);
+  it("emits a repo-risk-analysis unknown when QA Radar produced no repo_quality fact", () => {
+    const ids = deriveUnknownFacts([], "2026-06-02").map((f) => f.id);
+    expect(ids).toContain("repo_quality.risk-analysis");
+  });
+
+  it("suppresses the repo-risk-analysis unknown when QA Radar ran (repo_quality fact present)", () => {
+    const present: Fact[] = [
+      makeFact({ id: "repo_quality.high-churn-untested", domain: "repo_quality", statement: "Risky files.", provenance: "observed", confidence: 0.82, evidence_provider: "qaradar" }, "2026-06-02"),
+    ];
+    const ids = deriveUnknownFacts(present, "2026-06-02").map((f) => f.id);
+    expect(ids).not.toContain("repo_quality.risk-analysis");
+  });
+
+  it("emits exactly the 9 specified unknowns when nothing is suppressed", () => {
+    expect(deriveUnknownFacts([], "2026-06-02")).toHaveLength(9);
   });
 });

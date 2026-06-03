@@ -70,6 +70,14 @@ const SPECS: UnknownSpec[] = [
     question: "Do you trust the current test suite, and are failures treated as real?",
     risk_if_wrong: "The agent may over-trust a flaky or ignored suite.",
   },
+  {
+    id: "repo_quality.risk-analysis",
+    domain: "repo_quality",
+    statement: "Deterministic repo-risk analysis (QA Radar) was not available, so technical risk hotspots are unknown.",
+    question: "Is QA Radar (or similar churn/coverage risk analysis) available to run on this repo?",
+    risk_if_wrong: "The agent may give generic 'what to test first' advice without knowing where technical risk concentrates.",
+    suppressIfPrefix: ["repo_quality.high-churn-untested"],
+  },
 ];
 
 export function deriveUnknownFacts(facts: Fact[], today: string): Fact[] {
