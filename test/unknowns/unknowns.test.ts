@@ -22,4 +22,18 @@ describe("deriveUnknownFacts", () => {
     expect(ids).toContain("ownership.approvers");
     expect(ids).toContain("build.qa-build-process");
   });
+
+  it("suppresses ownership.approvers when a CODEOWNERS knowledge_sources fact is present", () => {
+    const present: Fact[] = [
+      makeFact({ id: "knowledge_sources.codeowners", domain: "knowledge_sources", statement: "CODEOWNERS present.", provenance: "observed", confidence: 0.8, evidence_provider: "docs-scanner" }, "2026-06-02"),
+    ];
+    const ids = deriveUnknownFacts(present, "2026-06-02").map((f) => f.id);
+    expect(ids).not.toContain("ownership.approvers");
+    // the other unknowns are unaffected
+    expect(ids).toContain("build.qa-build-process");
+  });
+
+  it("emits exactly the 8 specified unknowns when nothing is suppressed", () => {
+    expect(deriveUnknownFacts([], "2026-06-02")).toHaveLength(8);
+  });
 });
