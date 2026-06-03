@@ -1,0 +1,24 @@
+{
+  "summary": {
+    "repo": "qaradar",
+    "analyzed_at": "2026-06-02T08:10:26Z",
+    "source_files": 14,
+    "test_files": 14,
+    "test_to_source_ratio": 1.0,
+    "avg_coverage": null,
+    "files_with_tests": 11,
+    "files_without_tests": 3,
+    "critical_risk_count": 0,
+    "high_risk_count": 3,
+    "coverage_status": "no_report_found"
+  },
+  "risky_modules": [
+    { "path": "qaradar/models.py", "risk_level": "high", "risk_score": 0.681, "reasons": ["No coverage data available", "No test files found for this source file"] },
+    { "path": "qaradar/cli.py", "risk_level": "high", "risk_score": 0.644, "reasons": ["High churn: 9 commits, 297 lines changed", "No coverage data available"] }
+  ],
+  "untested_files": ["qaradar/models.py", "tests/fixtures/python_app/src/untested.py"],
+  "high_churn": [
+    { "path": "qaradar/cli.py", "commits": 9 },
+    { "path": "qaradar/server.py", "commits": 6 }
+  ]
+}
