@@ -57,54 +57,74 @@ QA Radar does not know by itself:
 
 QA Boot must not confuse QA Radar technical risk with total QA priority.
 
-## V1 integration posture
+## Integration posture (implemented in V0)
 
-In V1 the adapter is built against a **pinned JSON contract and a committed
-fixture**, with a **stub provider** standing in for a live QA Radar. Real wiring
-(spawning `qaradar` or calling its MCP) is deferred — the contract below is the
-seam so the swap is drop-in.
+> **Status:** As of V0 the adapter is **wired live**. QA Boot spawns the real
+> `qaradar` CLI as a subprocess and normalizes its JSON output. The earlier
+> "stub provider against a guessed contract" plan was dropped once we confirmed
+> `qaradar` is a real, installed CLI (see ADR 0003 and the V0 design spec).
 
-- The adapter consumes a JSON document matching the schema below.
-- A fixture lives in the sample org / test corpus and exercises the full
-  normalize → `repo-risk.md` → unknowns path without needing QA Radar installed.
-- `isAvailable()` returns false when no real QA Radar is found; V1 then either
-  uses the stub (in demo/test) or skips QA Radar and records the gap as an
-  unknown.
+- The provider (`src/providers/qaradar-provider.ts`) implements
+  `EvidenceProvider`. `isAvailable()` returns false when `qaradar` is not on
+  PATH or the config disables it; otherwise it probes `qaradar --version`.
+- `collect()` runs `qaradar analyze <repoPath> --json-output --days <n> --top <n>`
+  and parses stdout. Any failure (non-zero exit, empty stdout, unparseable JSON)
+  returns `[]` — the scan never throws on the optional provider.
+- The pure parse step lives in `src/providers/qaradar-parse.ts` and is unit-tested
+  against a committed fixture (`fixtures/qaradar/sample.json`) so tests run without
+  the binary; a separate integration test spawns the real CLI and is skipped when
+  `qaradar` is absent.
+- When QA Radar does not run, QA Boot records the gap as a deterministic unknown
+  fact (`repo_quality.risk-analysis`), suppressed when QA Radar did run.
 
-## Expected JSON contract
+Deferred to a later version: diff-aware `--base` mode (the `PrRiskReport` shape),
+and calling QA Radar via its MCP server instead of the CLI.
 
-QA Boot reads this shape (fields it does not recognize are ignored):
+## JSON contract (verified against the real tool)
+
+QA Boot reads the shape emitted by `qaradar analyze --json-output`. Fields it
+does not recognize are ignored, so future qaradar additions won't break parsing.
+The TypeScript types are in `src/providers/qaradar-contract.ts`.
 
 ```json
 {
-  "schema_version": "1",
-  "tool": "qaradar",
-  "command": "qaradar analyze . --json-output",
-  "generated_at": "2026-05-30T12:00:00Z",
-  "base": "origin/main",
+  "summary": {
+    "repo": "qaradar",
+    "analyzed_at": "2026-06-02T08:10:26Z",
+    "source_files": 14,
+    "test_files": 14,
+    "test_to_source_ratio": 1.0,
+    "avg_coverage": null,
+    "files_with_tests": 11,
+    "files_without_tests": 3,
+    "critical_risk_count": 0,
+    "high_risk_count": 3,
+    "coverage_status": "no_report_found"
+  },
   "risky_modules": [
     {
-      "path": "src/payments/core.py",
-      "risk": "critical",
-      "churn": 0.91,
-      "coverage": 0.0,
-      "has_tests": false,
-      "recently_modified": true
+      "path": "qaradar/models.py",
+      "risk_level": "high",
+      "risk_score": 0.681,
+      "reasons": ["No coverage data available", "No test files found for this source file"]
     }
   ],
-  "untested_files": ["src/payments/core.py"],
-  "coverage_gaps": [
-    { "path": "src/auth/tokens.py", "coverage": 0.12 }
-  ],
-  "summary": {
-    "critical_count": 3,
-    "high_count": 7
-  }
+  "untested_files": ["qaradar/models.py"],
+  "high_churn": [
+    { "path": "qaradar/cli.py", "commits": 9 }
+  ]
 }
 ```
 
-`risk` is one of `critical | high | medium | low`. Counts in `summary` are the
-authoritative totals used in the `repo-risk.high-churn-untested-files` fact.
+`risk_level` is one of `critical | high | medium | low`; `risk_score` is `0.0–1.0`.
+`coverage_status` is `ok | no_report_found`. The `summary.critical_risk_count` and
+`summary.high_risk_count` totals are the authoritative counts surfaced in the
+`repo_quality.high-churn-untested` fact.
+
+> Note: top-level QA Radar output uses `high_churn` (commit-count entries), not a
+> `coverage_gaps` array. An earlier draft of this doc guessed a different shape
+> (`schema_version`/`risk`/`churn`/`coverage_gaps`); that guess predated the tool
+> and has been corrected here.
 
 ## Example commands
 
@@ -133,56 +153,64 @@ QA Boot should generate:
 qa-context/repo-risk.md
 ```
 
-Example content:
+It is written only when QA Radar ran (a `repo_quality` fact exists); otherwise the
+file is skipped and the gap is recorded as an unknown. Actual output shape
+(`src/generate/special-renderers.ts → renderRepoRisk`):
 
 ```md
 # Repository Risk Summary
 
-Generated from deterministic repo analysis.
+Generated from deterministic repo analysis (QA Radar).
+
+Critical: 0 · High: 5
 
 ## Highest-risk areas
 
-1. `src/payments/core.py`
-   - High churn
-   - No detected tests
-   - Recently modified
-
-2. `src/auth/tokens.py`
-   - Low coverage
-   - Active recently
+1. `qaradar/models.py` (high)
+   - No coverage data available
+   - No test files found for this source file
+2. `qaradar/cli.py` (high)
+   - High churn: 9 commits, 297 lines changed
+   - No coverage data available
 
 ## Important limitation
 
-This is a technical risk view. It does not know business priority, customer impact, ownership, or release criticality unless those facts are captured elsewhere in QA context.
+This is a technical risk view. It does not know business priority, customer impact, ownership, or release criticality unless captured elsewhere in QA context.
 ```
 
 ## Example fact
 
+The normalizer (`src/domains/repo-quality-facts.ts`) emits one observed fact whose
+`value` carries the summary counts plus the top-risk modules (top 5 by score):
+
 ```json
 {
-  "id": "repo-risk.high-churn-untested-files",
+  "id": "repo_quality.high-churn-untested",
   "domain": "repo_quality",
-  "statement": "Several high-churn files have no detected tests.",
+  "statement": "QA Radar flagged high-risk and/or untested files.",
   "value": {
-    "critical_count": 3,
-    "high_count": 7
+    "critical_count": 0,
+    "high_count": 3,
+    "files_without_tests": 3,
+    "coverage_status": "no_report_found",
+    "top_risky": [
+      { "path": "qaradar/models.py", "risk": "high", "score": 0.681, "reasons": ["No coverage data available"] }
+    ],
+    "untested_files": ["qaradar/models.py"]
   },
   "provenance": "observed",
   "confidence": 0.82,
   "evidence_provider": "qaradar",
   "evidence_command": "qaradar analyze . --json-output",
-  "evidence": [
-    "git history",
-    "coverage report",
-    "test-to-source mapping"
-  ],
+  "evidence": ["git history", "test-to-source mapping", "no coverage report"],
   "limitations": [
-    "Business criticality is unknown",
-    "Risk is based on repository signals, not production impact"
+    "Business criticality is unknown.",
+    "Risk is based on repository signals, not production impact."
   ],
-  "risk_if_wrong": "The agent may prioritize tests for technically risky files that are not the most business-critical areas.",
+  "risk_if_wrong": "The agent may prioritize technically risky files that are not the most business-critical.",
   "needs_human_confirmation": false,
-  "last_verified": "2026-05-30"
+  "last_verified": "2026-06-02",
+  "expires_after_days": 30
 }
 ```
 
@@ -190,13 +218,17 @@ This is a technical risk view. It does not know business priority, customer impa
 
 QA Boot should:
 
-- detect whether QA Radar is available,
-- offer to run it,
+- detect whether QA Radar is available (`qaradar` on PATH),
+- run it during `scan` when enabled,
 - parse JSON output,
 - normalize findings into facts,
-- generate `repo-risk.md`,
-- update `maturity.md`,
+- generate `repo-risk.md` when a `repo_quality` fact exists,
 - add unknowns where repo risk lacks business context.
+
+> Note: V0 does **not** feed QA Radar output into the maturity rubric — the
+> deterministic rubric (`src/maturity/rubric.ts`) scores from test/CI/docs
+> signals only. Wiring repo-risk into the Test-signal/Trust dimensions is a
+> possible later refinement, not current behavior.
 
 QA Boot should not:
 
@@ -209,16 +241,21 @@ QA Boot should not:
 
 ## Unknowns generated from QA Radar
 
-When QA Radar identifies technical risk but business context is missing, QA Boot should create unknowns such as:
+V0 emits two deterministic unknown facts around repo risk (it does not yet emit
+per-file unknowns):
 
-```md
-## Unknowns from repo-risk analysis
+- **When QA Radar ran** (`repo_quality.high-churn-untested` exists), the
+  `repo-quality-facts` normalizer adds `business_priority.vs-repo-risk` —
+  "Repo risk is known technically, but business criticality of those files is
+  unknown." with the question *"Which of the technically risky files are
+  business-critical or customer-facing?"*
+- **When QA Radar did not run**, the unknowns generator
+  (`src/unknowns/unknowns.ts`) emits `repo_quality.risk-analysis` — the gap that
+  no deterministic repo-risk analysis was available — suppressed once QA Radar
+  does run.
 
-- `src/payments/core.py` is technically high-risk, but business criticality is unknown.
-- Several files have no detected tests, but ownership is unknown.
-- Coverage exists, but it is unclear whether the team trusts it.
-- PR risk can be calculated, but release-blocking rules are unknown.
-```
+Per-file business-context unknowns (e.g. "`path` is high-risk but its business
+criticality is unknown") are a possible later enhancement, not current behavior.
 
 ## Claude guidance
 

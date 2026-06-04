@@ -188,9 +188,10 @@ File-presence + shallow content parsing only. No AST, no network. Each returns
 
 QA Radar is a real installed CLI (`qaradar`, a Python package; source at
 `../qaradar`). V0 wires it live as a subprocess (ADR 0003: consume its output,
-do not rebuild it). The doc 06 "pinned contract" was written before the tool
-existed and **does not match reality** — we pin against the verified shape below.
-(Follow-up: doc 06 should be corrected to this contract; tracked separately.)
+do not rebuild it). The doc 06 "pinned contract" was originally written before the
+tool existed and did not match reality — we pin against the verified shape below.
+(Resolved: `docs/06-qa-radar-adapter.md` has since been corrected to this verified
+contract and the live-wiring posture.)
 
 ### Verified contract (`qaradar analyze <path> --json-output`)
 
