@@ -77,13 +77,14 @@ export function scanTests(ctx: ScanContext): RawEvidence[] {
     ev.push({ kind: "test-framework", path: "pyproject.toml", detail: { name: "pytest", source: "config" } });
   }
 
-  const buildText = BUILD_FILES.map((f) => ctx.read(f) ?? "").join("\n").toLowerCase();
-  if (buildText) {
-    const matchedFile = BUILD_FILES.find((f) => ctx.has(f));
+  for (const buildFile of BUILD_FILES) {
+    const text = ctx.read(buildFile);
+    if (!text) continue;
+    const lower = text.toLowerCase();
     for (const [keyword, name] of FRAMEWORK_KEYWORDS) {
-      if (buildText.includes(keyword) && !seen.has(name)) {
+      if (lower.includes(keyword) && !seen.has(name)) {
         seen.add(name);
-        ev.push({ kind: "test-framework", path: matchedFile, detail: { name, source: "build-file" } });
+        ev.push({ kind: "test-framework", path: buildFile, detail: { name, source: "build-file" } });
       }
     }
   }
