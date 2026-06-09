@@ -21,7 +21,7 @@ export async function cmdScan(repoPath: string, opts: ScanOptions): Promise<void
   const ctx = buildScanContext(repoPath, config);
   const today = todayISO();
   const { facts, qaradarRan } = await runScanDetailed(ctx, today, (m) => console.log(m));
-  if (qaradarRan) console.log("QA Radar: included repo-risk analysis.");
+  if (qaradarRan) console.log("QA Radar: included its analysis.");
 
   const factsPath = join(repoPath, "qa-context", "facts.json");
   const store = FactStore.load(factsPath);
