@@ -30,7 +30,9 @@ export function scoreMaturity(facts: Fact[], today: string): Fact[] {
       id: "maturity.discoverability",
       score,
       explanation: "Based on README, build files, CI config, docs, and agent config presence.",
-      evidence: ids.filter((i) => i === "repo.readme" || i.startsWith("build.command.") || i.startsWith("ci.system.")),
+      evidence: ids.filter(
+        (i) => i === "repo.readme" || i.startsWith("build.command.") || i.startsWith("build.tool.") || i.startsWith("ci.system."),
+      ),
       unknowns: n >= 5 ? [] : ["Onboarding docs and/or agent config may be missing."],
       next_step: "Ensure a README, build instructions, and CI are discoverable.",
     });
@@ -60,6 +62,7 @@ export function scoreMaturity(facts: Fact[], today: string): Fact[] {
 
   // Trust (capped at 2 in V0 — freshness is told knowledge)
   {
+    // test.coverage-shape is presence, not freshness — excluded from trust by design
     const coverage = ids.includes("test.coverage-tool");
     const score = coverage ? 2 : 0;
     dims.push({

@@ -36,6 +36,7 @@ describe("scoreMaturity V0.1 signals", () => {
     const facts = [obs("repo.readme", "repo"), obs("build.tool.gradle", "build"), obs("ci.system.github-actions", "ci")];
     const disc = scoreMaturity(facts, "2026-06-08").find((f) => f.id === "maturity.discoverability")!;
     expect((disc.value as any).score).toBeGreaterThanOrEqual(3);
+    expect((disc.value as any).evidence).toContain("build.tool.gradle");
   });
 
   it("treats a qaradar test.coverage-shape (files_with_tests>0) as tests existing", () => {
