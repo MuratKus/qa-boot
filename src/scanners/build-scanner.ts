@@ -25,5 +25,12 @@ export function scanBuild(ctx: ScanContext): RawEvidence[] {
     ev.push({ kind: "build-file", path: "fastlane", detail: { name: "fastlane" } });
   }
 
+  if (ctx.has("build.gradle") || ctx.has("build.gradle.kts") || ctx.has("gradlew") || ctx.has("settings.gradle") || ctx.has("settings.gradle.kts")) {
+    ev.push({ kind: "build-file", path: "build.gradle", detail: { name: "gradle" } });
+  }
+  if (ctx.has("pom.xml") || ctx.has("mvnw")) {
+    ev.push({ kind: "build-file", path: "pom.xml", detail: { name: "maven" } });
+  }
+
   return ev;
 }

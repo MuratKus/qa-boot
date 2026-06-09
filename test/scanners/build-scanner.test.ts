@@ -14,3 +14,15 @@ describe("build-scanner", () => {
     expect(scanBuild(ctx("bare"))).toEqual([]);
   });
 });
+
+describe("build-scanner JVM build tools", () => {
+  it("detects gradle on the gradle fixture", () => {
+    const ev = scanBuild(ctx("gradle-junit"));
+    expect(ev.some((e) => e.kind === "build-file" && e.detail?.name === "gradle")).toBe(true);
+  });
+
+  it("detects maven on the maven fixture", () => {
+    const ev = scanBuild(ctx("maven-selenium"));
+    expect(ev.some((e) => e.kind === "build-file" && e.detail?.name === "maven")).toBe(true);
+  });
+});
