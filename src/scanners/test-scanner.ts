@@ -18,7 +18,26 @@ const DEP_FRAMEWORKS: Array<[string, string]> = [
   ["mocha", "mocha"],
 ];
 
-const TEST_DIRS = ["test/", "tests/", "__tests__/", "spec/", "e2e/"];
+const FRAMEWORK_KEYWORDS: Array<[string, string]> = [
+  ["junit", "junit"],
+  ["testng", "testng"],
+  ["rest-assured", "rest-assured"],
+  ["restassured", "rest-assured"],
+  ["selenium", "selenium"],
+  ["seleniumhq", "selenium"],
+  ["selenide", "selenide"],
+  ["cucumber", "cucumber"],
+  ["appium", "appium"],
+  ["espresso", "espresso"],
+  ["xcuitest", "xcuitest"],
+  ["k6", "k6"],
+  ["jmeter", "jmeter"],
+  ["gatling", "gatling"],
+];
+
+const BUILD_FILES = ["build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "pom.xml"];
+
+const TEST_DIRS = ["test/", "tests/", "__tests__/", "spec/", "e2e/", "src/test/"];
 const COVERAGE_MARKERS: Array<[string, string]> = [
   ["**/coverage/**", "coverage-dir"],
   ["**/.nyc_output/**", "nyc"],
@@ -56,6 +75,17 @@ export function scanTests(ctx: ScanContext): RawEvidence[] {
   if (pyproject && /\[tool\.pytest/.test(pyproject) && !seen.has("pytest")) {
     seen.add("pytest");
     ev.push({ kind: "test-framework", path: "pyproject.toml", detail: { name: "pytest", source: "config" } });
+  }
+
+  const buildText = BUILD_FILES.map((f) => ctx.read(f) ?? "").join("\n").toLowerCase();
+  if (buildText) {
+    const matchedFile = BUILD_FILES.find((f) => ctx.has(f));
+    for (const [keyword, name] of FRAMEWORK_KEYWORDS) {
+      if (buildText.includes(keyword) && !seen.has(name)) {
+        seen.add(name);
+        ev.push({ kind: "test-framework", path: matchedFile, detail: { name, source: "build-file" } });
+      }
+    }
   }
 
   for (const dir of TEST_DIRS) {

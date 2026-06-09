@@ -21,3 +21,21 @@ describe("test-scanner", () => {
     expect(scanTests(ctx("bare")).filter((e) => e.kind === "test-framework")).toEqual([]);
   });
 });
+
+describe("test-scanner JVM detection", () => {
+  it("detects junit + rest-assured + src/test from a Gradle Kotlin build file", () => {
+    const ev = scanTests(ctx("gradle-junit"));
+    const fw = ev.filter((e) => e.kind === "test-framework").map((e) => e.detail?.name);
+    expect(fw).toContain("junit");
+    expect(fw).toContain("rest-assured");
+    expect(ev.some((e) => e.kind === "test-dir" && e.path === "src/test/")).toBe(true);
+    expect(ev.find((e) => e.kind === "test-framework" && e.detail?.name === "junit")!.detail?.source).toBe("build-file");
+  });
+
+  it("detects junit + selenium from a Maven pom.xml", () => {
+    const ev = scanTests(ctx("maven-selenium"));
+    const fw = ev.filter((e) => e.kind === "test-framework").map((e) => e.detail?.name);
+    expect(fw).toContain("junit");
+    expect(fw).toContain("selenium");
+  });
+});
