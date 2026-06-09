@@ -21,4 +21,14 @@ describe("testFacts", () => {
     ];
     expect(testFacts(ev, "2026-06-02").find((x) => x.id === "test.framework.jest")!.confidence).toBe(0.5);
   });
+
+  it("build-file sourced frameworks are inferred (0.5) with a limitation", () => {
+    const ev: RawEvidence[] = [
+      { kind: "test-framework", path: "build.gradle.kts", detail: { name: "junit", source: "build-file" } },
+    ];
+    const f = testFacts(ev, "2026-06-08").find((x) => x.id === "test.framework.junit")!;
+    expect(f.provenance).toBe("inferred");
+    expect(f.confidence).toBe(0.5);
+    expect(f.limitations.length).toBeGreaterThan(0);
+  });
 });
