@@ -3,6 +3,14 @@ import { makeFact, type Fact } from "../core/fact.js";
 
 const PROVIDER = "agent-config-scanner";
 
+function slug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/^\.+/, "")
+    .replace(/[.\s]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function agentFacts(ev: RawEvidence[], today: string): Fact[] {
   const facts: Fact[] = [];
 
@@ -11,7 +19,7 @@ export function agentFacts(ev: RawEvidence[], today: string): Fact[] {
     facts.push(
       makeFact(
         {
-          id: `agent_permissions.config.${name}`,
+          id: `agent_permissions.config.${slug(name)}`,
           domain: "agent_permissions",
           statement: `Agent config ${name} is present.`,
           provenance: "observed",

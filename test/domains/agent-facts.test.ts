@@ -9,7 +9,18 @@ describe("agentFacts", () => {
       { kind: "agent-skills", path: ".claude/skills" },
     ];
     const facts = agentFacts(ev, "2026-06-02");
-    expect(facts.some((f) => f.id === "agent_permissions.config.CLAUDE.md")).toBe(true);
+    expect(facts.some((f) => f.id === "agent_permissions.config.claude-md")).toBe(true);
     expect(facts.some((f) => f.id === "agent_permissions.skills")).toBe(true);
+  });
+
+  it("slugifies the config name so ids have no leading/double dots", () => {
+    const ev: RawEvidence[] = [
+      { kind: "agent-config", path: ".claude", detail: { name: ".claude" } },
+      { kind: "agent-config", path: "CLAUDE.md", detail: { name: "CLAUDE.md" } },
+    ];
+    const ids = agentFacts(ev, "2026-06-08").map((f) => f.id);
+    expect(ids).toContain("agent_permissions.config.claude");
+    expect(ids).toContain("agent_permissions.config.claude-md");
+    expect(ids.some((i) => i.includes(".."))).toBe(false);
   });
 });
