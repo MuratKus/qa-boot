@@ -1,5 +1,6 @@
 import type { RawEvidence } from "../scanners/raw-evidence.js";
 import { makeFact, type Fact } from "../core/fact.js";
+import type { EvidenceResult } from "../providers/evidence-provider.js";
 
 const PROVIDER = "test-scanner";
 
@@ -64,4 +65,31 @@ export function testFacts(ev: RawEvidence[], today: string): Fact[] {
   }
 
   return facts;
+}
+
+export function qaradarTestFacts(results: EvidenceResult[], today: string): Fact[] {
+  const t = results.find((r) => r.domain === "test");
+  if (!t) return [];
+  const v = t.value as {
+    test_to_source_ratio: number;
+    files_with_tests: number;
+    source_files: number;
+  };
+  return [
+    makeFact(
+      {
+        id: "test.coverage-shape",
+        domain: "test",
+        statement: `QA Radar: ${v.files_with_tests}/${v.source_files} source files have mapped tests (ratio ${v.test_to_source_ratio}).`,
+        provenance: "observed",
+        confidence: t.confidence,
+        evidence_provider: t.provider,
+        evidence_command: "qaradar analyze . --json-output",
+        evidence: t.evidence,
+        value: t.value,
+        limitations: t.limitations ?? [],
+      },
+      today,
+    ),
+  ];
 }
