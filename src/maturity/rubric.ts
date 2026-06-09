@@ -19,7 +19,7 @@ export function scoreMaturity(facts: Fact[], today: string): Fact[] {
   {
     const signals = [
       ids.includes("repo.readme"),
-      ids.some((i) => i.startsWith("build.command.")),
+      ids.some((i) => i.startsWith("build.command.") || i.startsWith("build.tool.")),
       ids.some((i) => i.startsWith("ci.system.")),
       ids.some((i) => i.startsWith("knowledge_sources.docs-dir") || i.startsWith("knowledge_sources.contributing")),
       ids.some((i) => i.startsWith("agent_permissions.config.")),
@@ -38,9 +38,15 @@ export function scoreMaturity(facts: Fact[], today: string): Fact[] {
 
   // Test signal
   {
-    const hasTests = ids.some((i) => i.startsWith("test.framework.")) || ids.includes("test.directory");
+    const shape = facts.find((f) => f.id === "test.coverage-shape")?.value as
+      | { files_with_tests?: number; coverage_status?: string }
+      | undefined;
+    const hasTests =
+      ids.some((i) => i.startsWith("test.framework.")) ||
+      ids.includes("test.directory") ||
+      (shape?.files_with_tests ?? 0) > 0;
     const runsTests = ids.includes("ci.runs-tests");
-    const coverage = ids.includes("test.coverage-tool");
+    const coverage = ids.includes("test.coverage-tool") || shape?.coverage_status === "ok";
     const score = !hasTests ? 0 : coverage && runsTests ? 5 : runsTests ? 3 : 2;
     dims.push({
       id: "maturity.test_signal",

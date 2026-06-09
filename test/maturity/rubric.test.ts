@@ -30,3 +30,18 @@ describe("scoreMaturity", () => {
     ]);
   });
 });
+
+describe("scoreMaturity V0.1 signals", () => {
+  it("counts build.tool.* toward discoverability (Gradle/Make repos)", () => {
+    const facts = [obs("repo.readme", "repo"), obs("build.tool.gradle", "build"), obs("ci.system.github-actions", "ci")];
+    const disc = scoreMaturity(facts, "2026-06-08").find((f) => f.id === "maturity.discoverability")!;
+    expect((disc.value as any).score).toBeGreaterThanOrEqual(3);
+  });
+
+  it("treats a qaradar test.coverage-shape (files_with_tests>0) as tests existing", () => {
+    const shape = makeFact({ id: "test.coverage-shape", domain: "test", statement: "shape", provenance: "observed", confidence: 0.8, evidence_provider: "qaradar", value: { files_with_tests: 5, coverage_status: "ok" } }, "2026-06-08");
+    const facts = [shape, obs("ci.runs-tests", "ci")];
+    const ts = scoreMaturity(facts, "2026-06-08").find((f) => f.id === "maturity.test_signal")!;
+    expect((ts.value as any).score).toBeGreaterThanOrEqual(3);
+  });
+});
