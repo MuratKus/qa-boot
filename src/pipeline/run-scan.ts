@@ -7,7 +7,7 @@ import { scanDocs } from "../scanners/docs-scanner.js";
 import { scanBuild } from "../scanners/build-scanner.js";
 import { scanAgentConfig } from "../scanners/agent-config-scanner.js";
 import { repoFacts } from "../domains/repo-facts.js";
-import { testFacts } from "../domains/test-facts.js";
+import { testFacts, qaradarTestFacts } from "../domains/test-facts.js";
 import { ciFacts } from "../domains/ci-facts.js";
 import { docsFacts } from "../domains/docs-facts.js";
 import { buildFacts } from "../domains/build-facts.js";
@@ -42,8 +42,11 @@ export async function runScanDetailed(ctx: ScanContext, today: string, log: (m: 
   try {
     if (await qaradarProvider.isAvailable(ctx)) {
       const results = await qaradarProvider.collect(ctx);
-      qaFacts = repoQualityFacts(results, today);
-      qaradarRan = qaFacts.length > 0;
+      qaFacts = [...repoQualityFacts(results, today), ...qaradarTestFacts(results, today)];
+      qaradarRan = results.length > 0;
+      if (results.length === 0) {
+        log("QA Radar ran but found no usable data (e.g. no commits or no risk signals). Continuing with built-in scanners.");
+      }
     } else {
       log("QA Radar not available. Continuing with built-in scanners.");
     }
