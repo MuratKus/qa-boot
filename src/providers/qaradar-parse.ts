@@ -3,16 +3,16 @@ import type { QaradarReport } from "./qaradar-contract.js";
 
 export function parseQaradar(report: QaradarReport): EvidenceResult[] {
   const s = report.summary;
-  if (!report.risky_modules.length && !report.untested_files.length) return [];
+  const results: EvidenceResult[] = [];
 
-  const topRisky = report.risky_modules
-    .slice()
-    .sort((a, b) => b.risk_score - a.risk_score)
-    .slice(0, 5)
-    .map((m) => ({ path: m.path, risk: m.risk_level, score: m.risk_score, reasons: m.reasons }));
+  if (report.risky_modules.length || report.untested_files.length) {
+    const topRisky = report.risky_modules
+      .slice()
+      .sort((a, b) => b.risk_score - a.risk_score)
+      .slice(0, 5)
+      .map((m) => ({ path: m.path, risk: m.risk_level, score: m.risk_score, reasons: m.reasons }));
 
-  return [
-    {
+    results.push({
       provider: "qaradar",
       domain: "repo_quality",
       statement: "QA Radar flagged high-risk and/or untested files.",
@@ -31,6 +31,28 @@ export function parseQaradar(report: QaradarReport): EvidenceResult[] {
         "Risk is based on repository signals, not production impact.",
       ],
       needsHumanConfirmation: false,
-    },
-  ];
+    });
+  }
+
+  if (s.source_files > 0) {
+    results.push({
+      provider: "qaradar",
+      domain: "test",
+      statement: "QA Radar mapped tests to source files.",
+      value: {
+        test_to_source_ratio: s.test_to_source_ratio,
+        files_with_tests: s.files_with_tests,
+        files_without_tests: s.files_without_tests,
+        source_files: s.source_files,
+        test_files: s.test_files,
+        coverage_status: s.coverage_status,
+      },
+      evidence: ["qaradar test-to-source mapping"],
+      confidence: 0.8,
+      limitations: ["Mapping is name/convention based, not execution-verified."],
+      needsHumanConfirmation: false,
+    });
+  }
+
+  return results;
 }
