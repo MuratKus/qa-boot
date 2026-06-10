@@ -80,10 +80,23 @@ const SPECS: UnknownSpec[] = [
   },
 ];
 
+export function knownUnknownIds(): string[] {
+  return SPECS.map((s) => s.id);
+}
+
+export function unknownSpec(id: string): { id: string; domain: string; question: string } | undefined {
+  const s = SPECS.find((x) => x.id === id);
+  return s ? { id: s.id, domain: s.domain, question: s.question } : undefined;
+}
+
 export function deriveUnknownFacts(facts: Fact[], today: string): Fact[] {
   const ids = facts.map((f) => f.id);
+  const answered = new Set(
+    facts.filter((f) => f.provenance === "told" && f.answers_unknown).map((f) => f.answers_unknown as string),
+  );
   const out: Fact[] = [];
   for (const spec of SPECS) {
+    if (answered.has(spec.id)) continue;
     const suppressed = (spec.suppressIfPrefix ?? []).some((p) => ids.some((id) => id.startsWith(p)));
     if (suppressed) continue;
     out.push(

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveUnknownFacts } from "../../src/unknowns/unknowns.js";
+import { deriveUnknownFacts, knownUnknownIds, unknownSpec } from "../../src/unknowns/unknowns.js";
 import { makeFact, type Fact } from "../../src/core/fact.js";
 
 describe("deriveUnknownFacts", () => {
@@ -48,5 +48,46 @@ describe("deriveUnknownFacts", () => {
 
   it("emits exactly the 9 specified unknowns when nothing is suppressed", () => {
     expect(deriveUnknownFacts([], "2026-06-02")).toHaveLength(9);
+  });
+});
+
+describe("unknown spec lookup", () => {
+  it("exposes the known unknown ids", () => {
+    const ids = knownUnknownIds();
+    expect(ids).toContain("ownership.approvers");
+    expect(ids).toContain("business_priority.critical-areas");
+    expect(ids.length).toBeGreaterThanOrEqual(9);
+  });
+
+  it("returns domain and question for a spec id", () => {
+    const s = unknownSpec("ownership.approvers")!;
+    expect(s.domain).toBe("ownership");
+    expect(s.question.length).toBeGreaterThan(0);
+    expect(unknownSpec("nope.nothing")).toBeUndefined();
+  });
+});
+
+describe("suppression by told answers", () => {
+  it("suppresses an unknown when a told fact answers it", () => {
+    const told = makeFact(
+      {
+        id: "ownership.approvers.answer", domain: "ownership", statement: "QA guild approves.",
+        provenance: "told", confidence: 0.9, evidence_provider: "human-interview",
+        answers_unknown: "ownership.approvers",
+      },
+      "2026-06-11",
+    );
+    const ids = deriveUnknownFacts([told], "2026-06-11").map((f) => f.id);
+    expect(ids).not.toContain("ownership.approvers");
+    expect(ids).toContain("business_priority.critical-areas");
+  });
+
+  it("free-form told facts (no answers_unknown) suppress nothing", () => {
+    const told = makeFact(
+      { id: "ownership.qa-guild", domain: "ownership", statement: "s", provenance: "told", confidence: 0.9, evidence_provider: "human-interview" },
+      "2026-06-11",
+    );
+    const ids = deriveUnknownFacts([told], "2026-06-11").map((f) => f.id);
+    expect(ids).toContain("ownership.approvers");
   });
 });
