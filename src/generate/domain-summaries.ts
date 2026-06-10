@@ -16,6 +16,8 @@ const SPECS: SummarySpec[] = [
   { file: "qa-context/test-data.md", title: "Test Data", purpose: "How test data is created and reset.", domains: ["test_data"] },
   { file: "qa-context/knowledge-sources.md", title: "Knowledge Sources", purpose: "Where project knowledge lives.", domains: ["knowledge_sources"] },
   { file: "qa-context/product-risk-map.md", title: "Product Risk Map", purpose: "Business priority of repo areas (usually unknown in V0).", domains: ["business_priority"] },
+  { file: "qa-context/ownership.md", title: "Ownership", purpose: "Who owns and approves quality-relevant changes.", domains: ["ownership"] },
+  { file: "qa-context/agent-permissions.md", title: "Agent Permissions", purpose: "What an AI agent is allowed to do in this repo.", domains: ["agent_permissions"] },
 ];
 
 export function renderDomainSummaries(facts: Fact[]): Record<string, string> {

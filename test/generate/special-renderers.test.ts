@@ -62,4 +62,17 @@ describe("special renderers", () => {
     expect(md).toContain('"QA guild approves."');
     expect(md).toContain("re-confirm");
   });
+
+  it("quality-risks renders told repo_quality facts", () => {
+    const told = makeFact(
+      {
+        id: "repo_quality.risk-analysis.answer", domain: "repo_quality", statement: "QA Radar cannot run here.",
+        provenance: "told", confidence: 0.9, evidence_provider: "human-interview", told_by: "murat",
+      },
+      "2026-06-11",
+    );
+    const md = renderQualityRisks([told]);
+    expect(md).toContain("QA Radar cannot run here.");
+    expect(md).toContain("told by murat");
+  });
 });

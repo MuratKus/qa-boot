@@ -90,4 +90,19 @@ describe("suppression by told answers", () => {
     const ids = deriveUnknownFacts([told], "2026-06-11").map((f) => f.id);
     expect(ids).toContain("ownership.approvers");
   });
+
+  it("stale told answers do not suppress (resurfacing)", () => {
+    const stale = {
+      ...makeFact(
+        {
+          id: "ownership.approvers.answer", domain: "ownership", statement: "old", provenance: "told",
+          confidence: 0.9, evidence_provider: "human-interview", answers_unknown: "ownership.approvers",
+        },
+        "2025-01-01",
+      ),
+      stale: true,
+    };
+    const ids = deriveUnknownFacts([stale], "2026-06-11").map((f) => f.id);
+    expect(ids).toContain("ownership.approvers");
+  });
 });

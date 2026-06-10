@@ -23,4 +23,18 @@ describe("renderDomainSummaries", () => {
     expect(env).toContain("Ask a human:");
     expect(env).toContain("What environments exist?");
   });
+
+  it("renders ownership and agent-permissions summaries including told facts", () => {
+    const told = makeFact(
+      {
+        id: "ownership.approvers.answer", domain: "ownership", statement: "QA guild approves risky changes.",
+        provenance: "told", confidence: 0.9, evidence_provider: "human-interview", told_by: "murat",
+      },
+      "2026-06-11",
+    );
+    const out = renderDomainSummaries([told]);
+    expect(out["qa-context/ownership.md"]).toContain("QA guild approves risky changes.");
+    expect(out["qa-context/ownership.md"]).toContain("told");
+    expect(out["qa-context/agent-permissions.md"]).toBeDefined();
+  });
 });

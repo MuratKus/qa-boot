@@ -92,7 +92,7 @@ export function unknownSpec(id: string): { id: string; domain: string; question:
 export function deriveUnknownFacts(facts: Fact[], today: string): Fact[] {
   const ids = facts.map((f) => f.id);
   const answered = new Set(
-    facts.filter((f) => f.provenance === "told" && f.answers_unknown).map((f) => f.answers_unknown as string),
+    facts.filter((f) => f.provenance === "told" && f.answers_unknown && !f.stale).map((f) => f.answers_unknown as string),
   );
   const out: Fact[] = [];
   for (const spec of SPECS) {

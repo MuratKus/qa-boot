@@ -92,6 +92,9 @@ export function renderQualityRisks(facts: Fact[]): string {
   const rq = facts.find((f) => f.id === "repo_quality.high-churn-untested");
   if (rq) lines.push("- Technical repo risk is available — see `repo-risk.md`.");
   else lines.push("- No QA Radar data; technical repo risk is unknown.");
+  for (const f of facts.filter((x) => x.domain === "repo_quality" && x.provenance === "told")) {
+    lines.push(`- ${f.statement} — _told by ${f.told_by ?? "unknown"}_`);
+  }
   const unknownCount = facts.filter((f) => f.provenance === "unknown").length;
   lines.push(`- ${unknownCount} important unknowns recorded — see \`unknowns.md\`.`, "");
   return lines.join("\n").trimEnd() + "\n";
