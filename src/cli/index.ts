@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { cmdInit } from "./commands/init.js";
 import { cmdScan } from "./commands/scan.js";
 import { cmdGenerate } from "./commands/generate.js";
+import { cmdTell } from "./commands/tell.js";
 import { basename } from "node:path";
 
 const program = new Command();
@@ -46,6 +47,23 @@ program
   .option("--no-claude", "skip Claude output")
   .action(async (o) => {
     await cmdGenerate(process.cwd(), { claude: o.claude });
+  });
+
+program
+  .command("tell <idOrStatement> [statement]")
+  .description("Record human-told QA knowledge (answer an unknown by id, or add --domain knowledge)")
+  .option("--domain <domain>", "domain for free-form knowledge")
+  .option("--by <who>", "who provided this knowledge (required)")
+  .option("--source <url>", "optional source link")
+  .option("--id <slug>", "explicit id slug for free-form mode")
+  .action(async (idOrStatement: string, statement: string | undefined, o) => {
+    const isAnswer = statement !== undefined;
+    await cmdTell(process.cwd(), isAnswer ? idOrStatement : undefined, isAnswer ? statement! : idOrStatement, {
+      domain: o.domain,
+      by: o.by,
+      source: o.source,
+      id: o.id,
+    });
   });
 
 program.parseAsync().catch((err) => {
