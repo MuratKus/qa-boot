@@ -45,6 +45,10 @@ export class FactStore {
     }
   }
 
+  remove(id: string): boolean {
+    return this.facts.delete(id);
+  }
+
   byId(id: string): Fact | undefined {
     return this.facts.get(id);
   }

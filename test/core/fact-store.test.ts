@@ -46,3 +46,14 @@ describe("FactStore.markTimeStaleness", () => {
     expect(s.byId("a")!.stale).toBeUndefined();
   });
 });
+
+describe("FactStore.remove", () => {
+  it("remove deletes a fact by id and reports whether it existed", () => {
+    const store = new FactStore([
+      makeFact({ id: "a.one", domain: "a", statement: "s", provenance: "observed", confidence: 1, evidence_provider: "t" }, "2026-06-11"),
+    ]);
+    expect(store.remove("a.one")).toBe(true);
+    expect(store.byId("a.one")).toBeUndefined();
+    expect(store.remove("a.one")).toBe(false);
+  });
+});
