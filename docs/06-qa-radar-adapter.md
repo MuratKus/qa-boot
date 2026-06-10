@@ -77,8 +77,9 @@ QA Boot must not confuse QA Radar technical risk with total QA priority.
 - When QA Radar does not run, QA Boot records the gap as a deterministic unknown
   fact (`repo_quality.risk-analysis`), suppressed when QA Radar did run.
 
-Deferred to a later version: diff-aware `--base` mode (the `PrRiskReport` shape),
-and calling QA Radar via its MCP server instead of the CLI.
+Deferred to a later version: consuming diff-aware `--base` mode (contract verified
+below, but qa-boot does not parse it yet), and calling QA Radar via its MCP server
+instead of the CLI.
 
 ## JSON contract (verified against the real tool)
 
@@ -125,6 +126,58 @@ The TypeScript types are in `src/providers/qaradar-contract.ts`.
 > `coverage_gaps` array. An earlier draft of this doc guessed a different shape
 > (`schema_version`/`risk`/`churn`/`coverage_gaps`); that guess predated the tool
 > and has been corrected here.
+
+## Diff-mode JSON contract (verified, not yet consumed)
+
+`qaradar analyze <path> --base <ref> --json-output` emits a **different** top-level
+shape than full mode — it is not a filtered `QaradarReport`. Verified against
+qaradar 0.4.0 on 2026-06-10 (an earlier `PrRiskReport` guess in this doc's history
+predated the tool). qa-boot does not parse this yet; when a PR-risk feature lands
+it needs its own contract type and parser — `parseQaradar` cannot consume it.
+
+```json
+{
+  "summary": {
+    "repo": "C:\\path\\to\\repo",
+    "analyzed_at": "2026-06-10T11:05:08+03:00",
+    "base_ref": "HEAD~5",
+    "head_ref": "HEAD",
+    "total_changed_files": 45,
+    "changed_source_files": 22,
+    "critical_count": 0,
+    "high_count": 8,
+    "medium_count": 13,
+    "low_count": 1,
+    "high_plus_count": 8,
+    "files_without_tests": 6,
+    "status": "ok"
+  },
+  "headline": "8 of 22 changed source files are HIGH+ risk",
+  "risky_changed_files": [
+    {
+      "file": "qaradar/cli.py",
+      "risk": "HIGH",
+      "score": 0.676,
+      "churn_score": 0.89,
+      "coverage_score": 0.7,
+      "test_mapping_score": 0.4,
+      "reasons": ["High churn: 10 commits, 399 lines changed", "No coverage data available"]
+    }
+  ],
+  "changed_files_without_tests": ["lib/untested.dart"],
+  "changed_test_files": ["tests/calculator_test.dart"],
+  "changed_untracked_by_analyzers": [".gitignore"]
+}
+```
+
+Contract differences from full mode worth remembering:
+
+- per-file entries use `file` (not `path`) and UPPERCASE `risk` (`"HIGH"`, not `"high"`);
+- per-file entries carry component sub-scores (`churn_score`, `coverage_score`,
+  `test_mapping_score`) that full mode does not expose;
+- `headline` is a ready-made one-line summary string;
+- summary counts are diff-scoped (`total_changed_files`, `changed_source_files`,
+  `high_plus_count`) and include `base_ref`/`head_ref`.
 
 ## Example commands
 
