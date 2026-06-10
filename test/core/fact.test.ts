@@ -45,3 +45,39 @@ describe("makeFact", () => {
     expect(f.expires_after_days).toBe(14);
   });
 });
+
+describe("makeFact told fields", () => {
+  it("passes told fields through when provided", () => {
+    const f = makeFact(
+      {
+        id: "ownership.approvers.answer",
+        domain: "ownership",
+        statement: "QA guild approves risky changes.",
+        provenance: "told",
+        confidence: 0.9,
+        evidence_provider: "human-interview",
+        told_by: "murat",
+        scope: "repo",
+        source: "https://example.com/page",
+        answers_unknown: "ownership.approvers",
+        expires_after_days: 180,
+      },
+      "2026-06-11",
+    );
+    expect(f.provenance).toBe("told");
+    expect(f.told_by).toBe("murat");
+    expect(f.scope).toBe("repo");
+    expect(f.source).toBe("https://example.com/page");
+    expect(f.answers_unknown).toBe("ownership.approvers");
+    expect(f.expires_after_days).toBe(180);
+  });
+
+  it("omits told fields entirely when not provided", () => {
+    const f = makeFact(
+      { id: "repo.readme", domain: "repo", statement: "README present.", provenance: "observed", confidence: 0.9, evidence_provider: "repo-scanner" },
+      "2026-06-11",
+    );
+    expect("told_by" in f).toBe(false);
+    expect("answers_unknown" in f).toBe(false);
+  });
+});

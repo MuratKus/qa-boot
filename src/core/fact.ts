@@ -1,4 +1,5 @@
-export type Provenance = "observed" | "inferred" | "unknown";
+export type Provenance = "observed" | "inferred" | "unknown" | "told";
+export type FactScope = "repo";
 
 export interface Fact {
   id: string;
@@ -17,6 +18,10 @@ export interface Fact {
   expires_after_days: number;
   stale?: boolean;
   stale_reason?: string;
+  told_by?: string;
+  scope?: FactScope;
+  source?: string | null;
+  answers_unknown?: string;
 }
 
 export interface MakeFactInput {
@@ -33,6 +38,10 @@ export interface MakeFactInput {
   risk_if_wrong?: string;
   needs_human_confirmation?: boolean;
   expires_after_days?: number;
+  told_by?: string;
+  scope?: FactScope;
+  source?: string | null;
+  answers_unknown?: string;
 }
 
 export function todayISO(d: Date = new Date()): string {
@@ -40,7 +49,7 @@ export function todayISO(d: Date = new Date()): string {
 }
 
 export function makeFact(input: MakeFactInput, today: string = todayISO()): Fact {
-  return {
+  const f: Fact = {
     id: input.id,
     domain: input.domain,
     statement: input.statement,
@@ -56,4 +65,9 @@ export function makeFact(input: MakeFactInput, today: string = todayISO()): Fact
     last_verified: today,
     expires_after_days: input.expires_after_days ?? 30,
   };
+  if (input.told_by !== undefined) f.told_by = input.told_by;
+  if (input.scope !== undefined) f.scope = input.scope;
+  if (input.source !== undefined) f.source = input.source;
+  if (input.answers_unknown !== undefined) f.answers_unknown = input.answers_unknown;
+  return f;
 }
