@@ -9,6 +9,7 @@ export function renderClaudeQa(opts: { hasRepoRisk: boolean }): string {
     "- If a required fact is marked unknown in `qa-context/unknowns.md`, say so and ask the human question listed there.",
     "- Do not treat technical repo risk as business priority unless confirmed in `qa-context/product-risk-map.md`.",
     "- Do not suggest external writes (PR comments, tickets, CI triggers) unless explicitly approved by the user.",
+    "- Facts marked _told_ were stated by a human (see `qa-context/qa-interview-log.md`). Prefer them over inferred facts; if marked stale, re-confirm via the question in `unknowns.md` instead of assuming.",
   ];
   if (opts.hasRepoRisk) {
     lines.push("- Use `qa-context/repo-risk.md` for technical repo risk when asked what to test first.");

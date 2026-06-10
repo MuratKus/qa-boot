@@ -13,4 +13,10 @@ describe("renderClaudeQa", () => {
   it("omits the repo-risk pointer when QA Radar did not run", () => {
     expect(renderClaudeQa({ hasRepoRisk: false })).not.toContain("repo-risk.md");
   });
+
+  it("includes the told-provenance legend", () => {
+    const md = renderClaudeQa({ hasRepoRisk: false });
+    expect(md).toContain("told");
+    expect(md).toContain("qa-interview-log.md");
+  });
 });

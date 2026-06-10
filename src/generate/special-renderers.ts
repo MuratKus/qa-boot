@@ -4,6 +4,11 @@ import type { QaBootConfig } from "../config/config.js";
 export function renderUnknowns(facts: Fact[]): string {
   const unknowns = facts.filter((f) => f.provenance === "unknown");
   const lines = ["# Unknowns", "", "Knowledge QA Boot could not determine. Ask a human before assuming.", ""];
+  const staleAnswers = new Map(
+    facts
+      .filter((f) => f.provenance === "told" && f.stale && f.answers_unknown)
+      .map((f) => [f.answers_unknown as string, f]),
+  );
   const byDomain = new Map<string, Fact[]>();
   for (const f of unknowns) {
     const list = byDomain.get(f.domain) ?? [];
@@ -16,6 +21,12 @@ export function renderUnknowns(facts: Fact[]): string {
       lines.push(`- ${f.statement}`);
       const q = (f.value as { question?: string } | null)?.question;
       if (q) lines.push(`  - Ask a human: ${q}`);
+      const prev = staleAnswers.get(f.id);
+      if (prev) {
+        lines.push(
+          `  - Previously answered ${prev.last_verified} by ${prev.told_by ?? "unknown"}: "${prev.statement}" — please re-confirm or update via \`qa-boot tell\`.`,
+        );
+      }
     }
     lines.push("");
   }

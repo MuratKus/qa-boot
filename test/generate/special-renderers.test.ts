@@ -36,4 +36,30 @@ describe("special renderers", () => {
   it("renders refresh policy from config", () => {
     expect(renderRefreshPolicy(defaultConfig("svc"))).toContain("30");
   });
+
+  it("renders a previously-answered note when a stale told answer exists", () => {
+    const unknown = makeFact(
+      {
+        id: "ownership.approvers", domain: "ownership", statement: "Who approves risky changes is unknown.",
+        provenance: "unknown", confidence: 0, evidence_provider: "unknowns-generator",
+        value: { question: "Who owns and approves risky changes in this repo?" },
+      },
+      "2026-06-11",
+    );
+    const staleTold = {
+      ...makeFact(
+        {
+          id: "ownership.approvers.answer", domain: "ownership", statement: "QA guild approves.",
+          provenance: "told", confidence: 0.9, evidence_provider: "human-interview",
+          answers_unknown: "ownership.approvers", told_by: "murat",
+        },
+        "2025-12-01",
+      ),
+      stale: true,
+    };
+    const md = renderUnknowns([unknown, staleTold]);
+    expect(md).toContain("Previously answered 2025-12-01 by murat");
+    expect(md).toContain('"QA guild approves."');
+    expect(md).toContain("re-confirm");
+  });
 });
