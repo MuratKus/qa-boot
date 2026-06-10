@@ -1,15 +1,8 @@
 import type { RawEvidence } from "../scanners/raw-evidence.js";
 import { makeFact, type Fact } from "../core/fact.js";
+import { slug } from "../core/slug.js";
 
 const PROVIDER = "agent-config-scanner";
-
-function slug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/^\.+/, "")
-    .replace(/[.\s]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 export function agentFacts(ev: RawEvidence[], today: string): Fact[] {
   const facts: Fact[] = [];
