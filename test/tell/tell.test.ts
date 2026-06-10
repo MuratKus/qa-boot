@@ -108,4 +108,28 @@ describe("applyTell validation", () => {
     expect(TELLABLE_DOMAINS).toContain("ownership");
     expect(TELLABLE_DOMAINS).toContain("knowledge_sources");
   });
+
+  it("rejects whitespace-only --by and statement", () => {
+    expect(() => applyTell(new FactStore(), { unknownId: "ownership.approvers", statement: "s", by: "   " }, TODAY)).toThrow(/--by/);
+    expect(() => applyTell(new FactStore(), { unknownId: "ownership.approvers", statement: "   ", by: "m" }, TODAY)).toThrow(/statement/i);
+  });
+
+  it("rejects a statement that slugs to nothing in free-form mode", () => {
+    expect(() => applyTell(new FactStore(), { domain: "environment", statement: "!!! ???", by: "m" }, TODAY)).toThrow(/--id/);
+  });
+
+  it("free-form ids may not collide with known unknown ids", () => {
+    expect(() => applyTell(new FactStore(), { domain: "environment", statement: "List", by: "m" }, TODAY)).toThrow(/collides with a known unknown/);
+    expect(() => applyTell(new FactStore(), { domain: "ownership", statement: "x", by: "m", idSlug: "approvers" }, TODAY)).toThrow(
+      /collides with a known unknown/,
+    );
+  });
+
+  it("answer mode on an already-removed unknown reports removedUnknown false and stamps provenance", () => {
+    const store = storeWithUnknown();
+    applyTell(store, { unknownId: "ownership.approvers", statement: "First.", by: "murat" }, "2026-06-01");
+    const r2 = applyTell(store, { unknownId: "ownership.approvers", statement: "Again.", by: "murat" }, TODAY);
+    expect(r2.removedUnknown).toBe(false);
+    expect(r2.fact.evidence_provider).toBe("human-interview");
+  });
 });

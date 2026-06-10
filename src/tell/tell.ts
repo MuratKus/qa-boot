@@ -65,6 +65,11 @@ function freeformMode(store: FactStore, input: TellInput, today: string): TellRe
   const s = input.idSlug ? slug(input.idSlug) : slug(input.statement);
   if (!s) throw new TellError("Could not derive an id from the statement; pass --id <slug>.");
   const factId = `${domain}.${s}`;
+  if (unknownSpec(factId)) {
+    throw new TellError(
+      `Fact id "${factId}" collides with a known unknown. To answer that question run \`qa-boot tell ${factId} "..." --by <who>\`; otherwise pass --id <slug> to pick a different id.`,
+    );
+  }
   const existing = store.byId(factId);
   if (existing && existing.provenance !== "told") {
     throw new TellError(`Fact id "${factId}" already exists with provenance "${existing.provenance}". Pass --id <slug> to pick a different id.`);
