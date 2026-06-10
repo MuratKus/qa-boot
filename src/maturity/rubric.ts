@@ -13,6 +13,13 @@ interface DimResult {
 
 export function scoreMaturity(facts: Fact[], today: string): Fact[] {
   const ids = facts.map((f) => f.id);
+  const toldAnswers = new Set(
+    facts
+      .filter((f) => f.provenance === "told" && f.answers_unknown && !f.stale)
+      .map((f) => f.answers_unknown as string),
+  );
+  const boost = (score: number, unknownId: string): number =>
+    toldAnswers.has(unknownId) ? Math.min(5, score + 2) : score;
   const dims: DimResult[] = [];
 
   // Discoverability
@@ -64,13 +71,13 @@ export function scoreMaturity(facts: Fact[], today: string): Fact[] {
   {
     // test.coverage-shape is presence, not freshness — excluded from trust by design
     const coverage = ids.includes("test.coverage-tool");
-    const score = coverage ? 2 : 0;
+    const score = boost(coverage ? 2 : 0, "test_trust.confidence");
     dims.push({
       id: "maturity.trust",
       score,
       explanation: "Trust depends on coverage freshness and flake handling, which are unknown in V0.",
       evidence: coverage ? ["test.coverage-tool"] : [],
-      unknowns: ["Coverage freshness unknown.", "Flake handling unknown.", "Team trust in tests unknown."],
+      unknowns: ["Coverage freshness unknown.", "Flake handling unknown.", ...(toldAnswers.has("test_trust.confidence") ? [] : ["Team trust in tests unknown."])],
       next_step: "Capture whether the team trusts the suite and whether coverage is fresh.",
     });
   }
@@ -79,7 +86,7 @@ export function scoreMaturity(facts: Fact[], today: string): Fact[] {
   {
     const deploy = ids.includes("ci.has-deploy-job");
     const releaseDocs = ids.some((i) => i.startsWith("knowledge_sources.changelog"));
-    const score = deploy && releaseDocs ? 3 : deploy ? 1 : 0;
+    const score = boost(deploy && releaseDocs ? 3 : deploy ? 1 : 0, "release.blocking-gates");
     dims.push({
       id: "maturity.release_readiness",
       score,
@@ -94,7 +101,7 @@ export function scoreMaturity(facts: Fact[], today: string): Fact[] {
   {
     const codeowners = ids.includes("knowledge_sources.codeowners");
     const template = ids.includes("knowledge_sources.pr-template") || ids.includes("knowledge_sources.issue-template");
-    const score = codeowners && template ? 3 : codeowners || template ? 2 : 0;
+    const score = boost(codeowners && template ? 3 : codeowners || template ? 2 : 0, "ownership.approvers");
     dims.push({
       id: "maturity.quality_ownership",
       score,
@@ -109,7 +116,7 @@ export function scoreMaturity(facts: Fact[], today: string): Fact[] {
   {
     const config = ids.some((i) => i.startsWith("agent_permissions.config."));
     const skills = ids.includes("agent_permissions.skills");
-    const score = config && skills ? 3 : config ? 2 : 0;
+    const score = boost(config && skills ? 3 : config ? 2 : 0, "agent_permissions.boundaries");
     dims.push({
       id: "maturity.agent_readiness",
       score,

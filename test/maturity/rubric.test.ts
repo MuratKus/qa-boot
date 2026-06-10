@@ -46,3 +46,47 @@ describe("scoreMaturity V0.1 signals", () => {
     expect((ts.value as any).score).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe("scoreMaturity told-answer boost", () => {
+  function toldAnswer(unknownId: string, domain: string) {
+    return makeFact(
+      {
+        id: `${unknownId}.answer`, domain, statement: "answered", provenance: "told", confidence: 0.9,
+        evidence_provider: "human-interview", answers_unknown: unknownId, expires_after_days: 180,
+      },
+      "2026-06-11",
+    );
+  }
+
+  it("quality_ownership: codeowners (2) + told approvers -> 4", () => {
+    const facts = [obs("knowledge_sources.codeowners", "knowledge_sources"), toldAnswer("ownership.approvers", "ownership")];
+    const d = scoreMaturity(facts, "2026-06-11").find((f) => f.id === "maturity.quality_ownership")!;
+    expect((d.value as any).score).toBe(4);
+  });
+
+  it("trust: told test_trust answer lifts 0 -> 2", () => {
+    const facts = [toldAnswer("test_trust.confidence", "test_trust")];
+    const d = scoreMaturity(facts, "2026-06-11").find((f) => f.id === "maturity.trust")!;
+    expect((d.value as any).score).toBe(2);
+  });
+
+  it("release_readiness and agent_readiness boost by 2 capped at 5", () => {
+    const facts = [
+      obs("ci.has-deploy-job", "ci"),
+      toldAnswer("release.blocking-gates", "release"),
+      obs("agent_permissions.config.claude", "agent_permissions"),
+      obs("agent_permissions.skills", "agent_permissions"),
+      toldAnswer("agent_permissions.boundaries", "agent_permissions"),
+    ];
+    const out = scoreMaturity(facts, "2026-06-11");
+    expect((out.find((f) => f.id === "maturity.release_readiness")!.value as any).score).toBe(3); // 1 + 2
+    expect((out.find((f) => f.id === "maturity.agent_readiness")!.value as any).score).toBe(5); // 3 + 2
+  });
+
+  it("stale told answers do not boost", () => {
+    const stale = { ...toldAnswer("ownership.approvers", "ownership"), stale: true };
+    const facts = [obs("knowledge_sources.codeowners", "knowledge_sources"), stale];
+    const d = scoreMaturity(facts, "2026-06-11").find((f) => f.id === "maturity.quality_ownership")!;
+    expect((d.value as any).score).toBe(2);
+  });
+});
