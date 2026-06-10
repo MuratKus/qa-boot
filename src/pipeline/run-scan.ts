@@ -22,12 +22,12 @@ export interface RunScanResult {
   qaradarRan: boolean;
 }
 
-export async function runScan(ctx: ScanContext, today: string, log: (m: string) => void = () => {}): Promise<Fact[]> {
-  const result = await runScanDetailed(ctx, today, log);
+export async function runScan(ctx: ScanContext, today: string, log: (m: string) => void = () => {}, priorFacts: Fact[] = []): Promise<Fact[]> {
+  const result = await runScanDetailed(ctx, today, log, priorFacts);
   return result.facts;
 }
 
-export async function runScanDetailed(ctx: ScanContext, today: string, log: (m: string) => void = () => {}): Promise<RunScanResult> {
+export async function runScanDetailed(ctx: ScanContext, today: string, log: (m: string) => void = () => {}, priorFacts: Fact[] = []): Promise<RunScanResult> {
   const deterministic: Fact[] = [
     ...repoFacts(scanRepo(ctx), today),
     ...testFacts(scanTests(ctx), today),
@@ -54,7 +54,7 @@ export async function runScanDetailed(ctx: ScanContext, today: string, log: (m: 
     log("QA Radar run failed. Continuing with built-in scanners.");
   }
 
-  const base = [...deterministic, ...qaFacts];
+  const base = [...deterministic, ...qaFacts, ...priorFacts];
   const unknowns = deriveUnknownFacts(base, today);
   const withUnknowns = [...base, ...unknowns];
   const maturity = scoreMaturity(withUnknowns, today);

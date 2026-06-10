@@ -20,11 +20,15 @@ export async function cmdScan(repoPath: string, opts: ScanOptions): Promise<void
 
   const ctx = buildScanContext(repoPath, config);
   const today = todayISO();
-  const { facts, qaradarRan } = await runScanDetailed(ctx, today, (m) => console.log(m));
-  if (qaradarRan) console.log("QA Radar: included its analysis.");
 
   const factsPath = join(repoPath, "qa-context", "facts.json");
   const store = FactStore.load(factsPath);
+  store.markTimeStaleness(today);
+  const priorTold = store.all().filter((f) => f.provenance === "told" && !f.stale);
+
+  const { facts, qaradarRan } = await runScanDetailed(ctx, today, (m) => console.log(m), priorTold);
+  if (qaradarRan) console.log("QA Radar: included its analysis.");
+
   store.upsert(facts);
   store.markTimeStaleness(today);
   store.save(factsPath);
