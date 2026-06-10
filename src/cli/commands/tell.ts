@@ -42,5 +42,5 @@ export async function cmdTell(
 
   console.log(`Recorded told fact ${result.fact.id} (scope: ${result.fact.scope ?? "repo"}).`);
   if (result.fact.answers_unknown) console.log(`Resolved unknown ${result.fact.answers_unknown}.`);
-  console.log(`${result.remainingUnknowns} unknowns remain open. Run \`qa-boot generate\` to refresh context files.`);
+  console.log(`${result.remainingUnknowns} unknowns remain open. Run \`qa-boot scan\` to refresh context files and maturity.`);
 }
