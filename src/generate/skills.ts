@@ -68,6 +68,21 @@ export function renderSkills(opts: { hasRepoRisk: boolean }): Record<string, str
         "- Do not approve a release. Do not invent release gates.",
       ].join("\n"),
     },
+    {
+      name: "qa-onboard",
+      description: "Interview a human to capture QA knowledge as told facts via qa-boot tell.",
+      body: [
+        "Interview the human to convert QA unknowns into recorded told facts.",
+        "",
+        "Phases:",
+        "1. Precondition: if `qa-context/` or `qa-context/unknowns.md` is missing, say so and suggest `qa-boot scan`. Do not improvise context.",
+        "2. Gather: if you lack baseline understanding of this repo, build it first — README, docs, repo structure, `qa-context/*.md`, `repo-risk.md` if present. Do not interview from ignorance.",
+        "3. Play back: summarize your understanding to the human and let them correct it. Corrections are capturable answers.",
+        "4. Interview: ask the open unknowns from `qa-context/unknowns.md` one question at a time, anchored in specifics you gathered. Then invite domain knowledge (environments, ownership, release, test data, business priority).",
+        '5. Capture: after each human answer run `qa-boot tell <unknown-id> "<answer>" --by <name>` (or `qa-boot tell "<statement>" --domain <domain> --by <name>` for knowledge with no matching unknown). Record only what the human said or explicitly confirmed — never your own inference.',
+        "6. Wrap: summarize what was captured, list remaining unknowns, and suggest `qa-boot scan` to refresh the generated context files.",
+      ].join("\n"),
+    },
   ];
 
   const out: Record<string, string> = {};
