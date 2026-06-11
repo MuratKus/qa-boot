@@ -46,7 +46,7 @@ V1 should not:
 
 ## Install & usage
 
-Run qa-boot directly in any repo — no install step needed:
+Requires Node 20+. Run qa-boot directly in any repo — no install step needed:
 
 ```bash
 npx qa-boot init --project-name my-service
@@ -61,7 +61,7 @@ Record human-told QA knowledge (answers to open unknowns, or free-form facts):
 
 ```bash
 npx qa-boot tell <unknown-id> "the answer" --by alice
-npx qa-boot tell "we release every Tuesday" --domain process --by alice
+npx qa-boot tell "we release every Tuesday" --domain release --by alice
 ```
 
 Prefer a permanent command? `npm install -g qa-boot` gives you `qa-boot` on your
