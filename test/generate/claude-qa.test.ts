@@ -19,4 +19,11 @@ describe("renderClaudeQa", () => {
     expect(md).toContain("told");
     expect(md).toContain("qa-interview-log.md");
   });
+
+  it("includes reactive getting-started guidance without proactive onboarding", () => {
+    const md = renderClaudeQa({ hasRepoRisk: false });
+    expect(md).toContain("Getting started");
+    expect(md).toContain("qa-onboard");
+    expect(md).toContain("Do not start onboarding proactively");
+  });
 });

@@ -53,10 +53,29 @@ export function runGenerate(opts: GenerateOptions): string[] {
 
   if (opts.claude && opts.config.claude.enabled) {
     emit("CLAUDE.qa.md", renderClaudeQa({ hasRepoRisk }));
+    ensureClaudeMdImport(opts.repoPath, written);
     if (opts.config.claude.generate_skills) {
       for (const [rel, content] of Object.entries(renderSkills({ hasRepoRisk }))) emit(rel, content);
     }
   }
 
   return written;
+}
+
+const CLAUDE_QA_IMPORT = "@CLAUDE.qa.md";
+
+/** Claude Code only auto-loads CLAUDE.md (and its @imports), so the generated
+ *  CLAUDE.qa.md must be referenced from there to enter agent context. */
+function ensureClaudeMdImport(repoPath: string, written: string[]): void {
+  const path = join(repoPath, "CLAUDE.md");
+  if (!existsSync(path)) {
+    writeFileSync(path, `# Project instructions\n\n${CLAUDE_QA_IMPORT}\n`, "utf8");
+    written.push("CLAUDE.md");
+    return;
+  }
+  const current = readFileSync(path, "utf8");
+  if (!current.includes(CLAUDE_QA_IMPORT)) {
+    writeFileSync(path, current.trimEnd() + `\n\n${CLAUDE_QA_IMPORT}\n`, "utf8");
+    written.push("CLAUDE.md");
+  }
 }

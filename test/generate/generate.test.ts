@@ -30,3 +30,58 @@ describe("runGenerate", () => {
     }
   });
 });
+
+describe("runGenerate CLAUDE.md wiring", () => {
+  function repoWithFacts(): string {
+    const dir = mkdtempSync(join(tmpdir(), "qaboot-claudemd-"));
+    mkdirSync(join(dir, "qa-context"), { recursive: true });
+    writeFileSync(join(dir, "qa-context", "facts.json"), JSON.stringify({ facts: [] }));
+    return dir;
+  }
+
+  it("creates CLAUDE.md with the @CLAUDE.qa.md import when absent", () => {
+    const dir = repoWithFacts();
+    try {
+      runGenerate({ repoPath: dir, config: defaultConfig("svc"), claude: true });
+      expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toContain("@CLAUDE.qa.md");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("appends the import to an existing CLAUDE.md, preserving content", () => {
+    const dir = repoWithFacts();
+    try {
+      writeFileSync(join(dir, "CLAUDE.md"), "# My project\n\nRun npm test.\n", "utf8");
+      runGenerate({ repoPath: dir, config: defaultConfig("svc"), claude: true });
+      const content = readFileSync(join(dir, "CLAUDE.md"), "utf8");
+      expect(content).toContain("# My project");
+      expect(content).toContain("Run npm test.");
+      expect(content).toContain("@CLAUDE.qa.md");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("is idempotent when the import is already present", () => {
+    const dir = repoWithFacts();
+    try {
+      writeFileSync(join(dir, "CLAUDE.md"), "# Mine\n\n@CLAUDE.qa.md\n", "utf8");
+      const before = readFileSync(join(dir, "CLAUDE.md"), "utf8");
+      runGenerate({ repoPath: dir, config: defaultConfig("svc"), claude: true });
+      expect(readFileSync(join(dir, "CLAUDE.md"), "utf8")).toBe(before);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not touch CLAUDE.md when claude output is disabled", () => {
+    const dir = repoWithFacts();
+    try {
+      runGenerate({ repoPath: dir, config: defaultConfig("svc"), claude: false });
+      expect(existsSync(join(dir, "CLAUDE.md"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
