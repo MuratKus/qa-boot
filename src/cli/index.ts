@@ -4,10 +4,11 @@ import { cmdInit } from "./commands/init.js";
 import { cmdScan } from "./commands/scan.js";
 import { cmdGenerate } from "./commands/generate.js";
 import { cmdTell } from "./commands/tell.js";
+import { cliVersion } from "./version.js";
 import { basename } from "node:path";
 
 const program = new Command();
-program.name("qa-boot").description("Bootstrap QA context for AI coding agents.").version("0.0.0");
+program.name("qa-boot").description("Bootstrap QA context for AI coding agents.").version(cliVersion());
 
 program
   .command("init")
